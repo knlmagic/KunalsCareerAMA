@@ -1,4 +1,4 @@
-import streamlit as st
+﻿import streamlit as st
 import difflib
 from openai import OpenAI
 import PyPDF2
@@ -45,7 +45,7 @@ Type a question below to get started.
 qa_pairs = {
     "What is your background?": "I have 24+ years of experience in technology consulting and client partnerships, specializing in the US Financials Services industry. My expertise includes AI strategy, digital transformation, and building scalable solutions.",
     "What is your vision for AI in vision care?": "AI has the potential to revolutionize vision care by enabling predictive diagnostics, personalized treatment plans, and AI-powered visual aids. I believe the focus should be on combining ethical AI practices with impactful business outcomes.",
-    "How do you lead AI adoption?": "I emphasize an incremental approach—identifying quick wins while laying the foundation for long-term scalability. AI governance, employee enablement, and measurable ROI are at the core of my approach.",
+    "How do you lead AI adoption?": "I emphasize an incremental approachâ€”identifying quick wins while laying the foundation for long-term scalability. AI governance, employee enablement, and measurable ROI are at the core of my approach.",
     "Can you scale AI teams?": "Yes, I have experience scaling AI teams by focusing on skill diversity, process automation, and empowering cross-functional collaboration to achieve faster AI deployments.",
     "What challenges do you foresee for AI?": "Key challenges include ensuring data privacy, overcoming adoption resistance, and aligning AI outcomes with business goals. Tackling these requires a blend of strategy, governance, and stakeholder alignment."
 }
@@ -134,7 +134,7 @@ if st.session_state.chat_history:
 # Display available questions as examples
 st.write("Sample Questions You Can Ask:")
 for question in qa_pairs.keys():
-    st.write(f"• {question}")
+    st.write(f"â€¢ {question}")
 
 # Footer
 st.write("---")
