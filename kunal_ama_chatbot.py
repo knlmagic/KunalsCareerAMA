@@ -144,10 +144,7 @@ if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
 
 # Chatbot Input and Response
-if 'user_input' not in st.session_state:
-    st.session_state.user_input = ""
-
-user_question = st.text_input("Ask a question:", key="user_input", value=st.session_state.user_input)
+user_question = st.text_input("Ask a question:")
 if user_question:
     # Get response using GPT-4 with the resume context
     response = get_gpt4_response(user_question)
@@ -161,9 +158,6 @@ if user_question:
     
     # Display response
     st.write("Response:", response)
-    
-    # Clear the input box
-    st.session_state.user_input = ""
 
 # Display current session chat history (visible to everyone)
 if st.session_state.chat_history:
