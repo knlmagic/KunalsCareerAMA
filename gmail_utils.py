@@ -9,6 +9,7 @@ from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from email.mime.text import MIMEText
 import base64
+from urllib.parse import urlparse, parse_qs
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -26,6 +27,25 @@ def initialize_session_state():
         st.session_state.oauth_flow_started = False
     if 'auth_url' not in st.session_state:
         st.session_state.auth_url = None
+    if 'oauth_state' not in st.session_state:
+        st.session_state.oauth_state = None
+
+def extract_auth_code_from_url(redirect_url):
+    """Extract authorization code and state from redirect URL."""
+    try:
+        # Parse the URL
+        parsed = urlparse(redirect_url)
+        # Get the query parameters
+        params = parse_qs(parsed.query)
+        
+        # Extract code and state
+        code = params.get('code', [None])[0]
+        state = params.get('state', [None])[0]
+        
+        return code, state
+    except Exception as e:
+        logger.error(f"Error parsing redirect URL: {e}")
+        return None, None
 
 def get_gmail_service():
     """Get Gmail API service instance."""
@@ -61,13 +81,14 @@ def get_gmail_service():
                 redirect_uri="http://localhost"
             )
             
-            auth_url, _ = flow.authorization_url(
+            auth_url, state = flow.authorization_url(
                 access_type='offline',
                 include_granted_scopes='true',
                 prompt='consent'
             )
             
             st.session_state.auth_url = auth_url
+            st.session_state.oauth_state = state
             st.session_state.flow = flow
         
         # Display OAuth instructions
@@ -85,6 +106,20 @@ def get_gmail_service():
         redirect_response = st.text_input("Enter the complete redirect URL:")
         if redirect_response:
             try:
+                # Extract code and state from redirect URL
+                code, returned_state = extract_auth_code_from_url(redirect_response)
+                
+                # Verify state matches
+                if returned_state != st.session_state.oauth_state:
+                    st.error("State mismatch! Please try the authorization process again.")
+                    # Reset the OAuth flow
+                    st.session_state.oauth_flow_started = False
+                    st.session_state.auth_url = None
+                    st.session_state.oauth_state = None
+                    if 'flow' in st.session_state:
+                        del st.session_state.flow
+                    return None
+                
                 flow = st.session_state.flow
                 flow.fetch_token(authorization_response=redirect_response)
                 creds = flow.credentials
@@ -106,6 +141,7 @@ def get_gmail_service():
                 # Clear the OAuth flow state
                 st.session_state.oauth_flow_started = False
                 st.session_state.auth_url = None
+                st.session_state.oauth_state = None
                 if 'flow' in st.session_state:
                     del st.session_state.flow
                     
