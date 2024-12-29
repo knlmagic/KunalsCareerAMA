@@ -144,7 +144,7 @@ if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
 
 # Chatbot Input and Response
-user_question = st.text_input("Ask a question:")
+user_question = st.text_input("Ask a question:", key="user_input")
 if user_question:
     # Get response using GPT-4 with the resume context
     response = get_gpt4_response(user_question)
