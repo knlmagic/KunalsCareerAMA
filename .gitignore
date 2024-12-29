@@ -1,5 +1,15 @@
-.streamlit/secrets.toml
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
 .env
+
+# OAuth and credentials
+token.pickle
+client_secret*.json
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Chat history
 chat_history/

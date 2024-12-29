@@ -4,6 +4,7 @@ from openai import OpenAI
 import PyPDF2
 import os
 from datetime import datetime
+from gmail_utils import get_gmail_service, send_email
 
 # Configure OpenAI API
 if 'OPENAI_API_KEY' not in st.secrets:
@@ -12,6 +13,13 @@ if 'OPENAI_API_KEY' not in st.secrets:
 
 # Initialize OpenAI client
 client = OpenAI(api_key=st.secrets['OPENAI_API_KEY'])
+
+# Initialize Gmail service
+try:
+    gmail_service = get_gmail_service()
+except Exception as e:
+    st.error(f"Error initializing Gmail service: {str(e)}")
+    gmail_service = None
 
 def read_pdf_file(file_path, file_type):
     try:
@@ -49,6 +57,28 @@ def append_to_master_log(question, answer):
         f.write(f"Question: {question}\n")
         f.write(f"Answer: {answer}\n")
         f.write("-" * 50 + "\n")
+
+def send_chat_summary(question, answer):
+    """Send chat summary via email"""
+    if not gmail_service:
+        return
+        
+    try:
+        recipient_email = st.secrets["RECIPIENT_EMAIL"]
+        subject = f"Chat Interaction Summary - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        body = f"""
+New Chat Interaction:
+Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+Question: {question}
+
+Answer: {answer}
+
+-------------------
+"""
+        send_email(gmail_service, recipient_email, subject, body)
+    except Exception as e:
+        st.error(f"Error sending email: {str(e)}")
 
 # Read both PDF files
 resume_content = read_pdf_file("resume.pdf", "resume")
@@ -149,7 +179,7 @@ with st.form(key='my_form', clear_on_submit=True):
     submit_button = st.form_submit_button("Ask")
 
 if submit_button and user_question:
-    # Get response using GPT-4 with the resume context
+    # Get response using GPT-3.5-turbo
     response = get_gpt4_response(user_question)
     
     # Save chat history to files
@@ -158,6 +188,9 @@ if submit_button and user_question:
     
     # Add to session state chat history
     st.session_state.chat_history.append({"question": user_question, "answer": response})
+    
+    # Send email summary
+    send_chat_summary(user_question, response)
     
     # Display response
     st.write("Response:", response)
