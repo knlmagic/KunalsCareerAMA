@@ -106,7 +106,7 @@ There's confusion on where to start, how to measure success, and how to transfor
         """
         
         response = client.chat.completions.create(
-            model="gpt-4-0613",
+            model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": question}
@@ -144,8 +144,11 @@ if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
 
 # Chatbot Input and Response
-user_question = st.text_input("Ask a question:", key="user_input")
-if user_question:
+with st.form(key='my_form', clear_on_submit=True):
+    user_question = st.text_input("Ask a question:")
+    submit_button = st.form_submit_button("Ask")
+
+if submit_button and user_question:
     # Get response using GPT-4 with the resume context
     response = get_gpt4_response(user_question)
     
