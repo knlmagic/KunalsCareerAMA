@@ -29,12 +29,15 @@ def initialize_session_state():
         st.session_state.auth_url = None
     if 'oauth_state' not in st.session_state:
         st.session_state.oauth_state = None
+    if 'needs_rerun' not in st.session_state:
+        st.session_state.needs_rerun = False
 
 def reset_oauth_flow():
     """Reset all OAuth-related session state variables."""
     st.session_state.oauth_flow_started = False
     st.session_state.auth_url = None
     st.session_state.oauth_state = None
+    st.session_state.needs_rerun = True
     if 'flow' in st.session_state:
         del st.session_state.flow
 
@@ -42,6 +45,12 @@ def get_gmail_service():
     """Get Gmail API service instance."""
     try:
         initialize_session_state()
+
+        # Check if we need to rerun after a reset
+        if st.session_state.needs_rerun:
+            st.session_state.needs_rerun = False
+            st.rerun()
+        
         creds = None
         
         # Try to load credentials from Streamlit secrets first
@@ -120,7 +129,7 @@ def get_gmail_service():
                     st.error("State mismatch! Please try the authorization process again.")
                     logger.error(f"State mismatch. Expected: {st.session_state.oauth_state}, Got: {returned_state}")
                     reset_oauth_flow()
-                    st.experimental_rerun()
+                    st.rerun()
                     return None
                 
                 # Get the flow from session state
