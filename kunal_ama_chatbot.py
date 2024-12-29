@@ -144,7 +144,10 @@ if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
 
 # Chatbot Input and Response
-user_question = st.text_input("Ask a question:")
+if 'user_input' not in st.session_state:
+    st.session_state.user_input = ""
+
+user_question = st.text_input("Ask a question:", key="user_input", value=st.session_state.user_input)
 if user_question:
     # Get response using GPT-4 with the resume context
     response = get_gpt4_response(user_question)
@@ -158,11 +161,14 @@ if user_question:
     
     # Display response
     st.write("Response:", response)
+    
+    # Clear the input box
+    st.session_state.user_input = ""
 
-# Display chat history
+# Display current session chat history (visible to everyone)
 if st.session_state.chat_history:
     st.write("---")
-    st.write("Chat History:")
+    st.write("Current Session Chat History:")
     for chat in st.session_state.chat_history:
         st.write(f"Q: {chat['question']}")
         st.write(f"A: {chat['answer']}")
@@ -172,6 +178,37 @@ if st.session_state.chat_history:
 st.write("Sample Questions You Can Ask:")
 for question in qa_pairs.keys():
     st.write(f"• {question}")
+
+# Add password-protected access to saved chat history
+st.write("---")
+st.write("Admin Access - Saved Chat History:")
+
+# Password input for admin access
+admin_password = st.text_input("Enter admin password to view saved chat history:", type="password")
+
+# Only show saved chat history if correct password is entered
+if admin_password == st.secrets.get("ADMIN_PASSWORD", "default_password"):  # You'll need to set this in Streamlit secrets
+    try:
+        # Check if master log exists
+        master_log = "chat_history/master_chat_log.txt"
+        if os.path.exists(master_log):
+            with open(master_log, "r", encoding="utf-8") as f:
+                chat_contents = f.read()
+                # Create download button
+                st.download_button(
+                    label="Download Complete Chat History",
+                    data=chat_contents,
+                    file_name="chat_history.txt",
+                    mime="text/plain"
+                )
+                # Display the contents
+                st.text_area("Complete Chat History", chat_contents, height=300)
+        else:
+            st.write("No saved chat history found yet.")
+    except Exception as e:
+        st.error(f"Error accessing chat history: {str(e)}")
+elif admin_password:  # Only show error if they've tried to enter a password
+    st.error("Incorrect password. Access denied.")
 
 # Footer
 st.write("---")
