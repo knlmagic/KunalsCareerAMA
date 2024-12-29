@@ -44,7 +44,7 @@ def get_gmail_service():
                 flow = Flow.from_client_config(
                     client_config,
                     scopes=SCOPES,
-                    redirect_uri=st.secrets.get("OAUTH_REDIRECT_URI", "https://kunalscareerama.streamlit.app/")
+                    redirect_uri="http://localhost"  # This should match what's in your Google Cloud Console
                 )
                 
                 auth_url, _ = flow.authorization_url(
@@ -57,16 +57,17 @@ def get_gmail_service():
                 ### Gmail Authorization Required
                 1. Click the link below to authorize the application
                 2. Select your Google account and grant permission
-                3. Copy the authorization code from the redirect page
-                4. Paste the code in the text box below
+                3. You will be redirected to localhost (which may show an error - this is expected)
+                4. Copy the entire URL from your browser's address bar after being redirected
+                5. Paste the complete URL in the text box below
                 """)
                 
                 st.markdown(f"[Click here to authorize the application]({auth_url})")
                 
-                code = st.text_input("Enter the authorization code:")
-                if code:
+                redirect_response = st.text_input("Enter the complete redirect URL:")
+                if redirect_response:
                     try:
-                        flow.fetch_token(code=code)
+                        flow.fetch_token(authorization_response=redirect_response)
                         creds = flow.credentials
                         
                         # Save credentials info for admin to update secrets
