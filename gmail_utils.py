@@ -30,22 +30,13 @@ def initialize_session_state():
     if 'oauth_state' not in st.session_state:
         st.session_state.oauth_state = None
 
-def extract_auth_code_from_url(redirect_url):
-    """Extract authorization code and state from redirect URL."""
-    try:
-        # Parse the URL
-        parsed = urlparse(redirect_url)
-        # Get the query parameters
-        params = parse_qs(parsed.query)
-        
-        # Extract code and state
-        code = params.get('code', [None])[0]
-        state = params.get('state', [None])[0]
-        
-        return code, state
-    except Exception as e:
-        logger.error(f"Error parsing redirect URL: {e}")
-        return None, None
+def reset_oauth_flow():
+    """Reset all OAuth-related session state variables."""
+    st.session_state.oauth_flow_started = False
+    st.session_state.auth_url = None
+    st.session_state.oauth_state = None
+    if 'flow' in st.session_state:
+        del st.session_state.flow
 
 def get_gmail_service():
     """Get Gmail API service instance."""
@@ -65,11 +56,11 @@ def get_gmail_service():
                     return service
             except Exception as e:
                 logger.error(f"Error loading token from secrets: {e}")
+                reset_oauth_flow()
         
         # If we reach here, we need to start the OAuth flow
         if not st.session_state.oauth_flow_started:
             logger.info("Starting new OAuth2 flow")
-            st.session_state.oauth_flow_started = True
             
             # Parse the client config from secrets
             client_config = json.loads(st.secrets["GOOGLE_CLIENT_CONFIG"])
@@ -87,9 +78,13 @@ def get_gmail_service():
                 prompt='consent'
             )
             
+            # Store flow information in session state
+            st.session_state.flow = flow
             st.session_state.auth_url = auth_url
             st.session_state.oauth_state = state
-            st.session_state.flow = flow
+            st.session_state.oauth_flow_started = True
+            
+            logger.info(f"Generated state: {state}")
         
         # Display OAuth instructions
         st.markdown("""
@@ -103,23 +98,32 @@ def get_gmail_service():
         
         st.markdown(f"[Click here to authorize the application]({st.session_state.auth_url})")
         
+        # For debugging
+        st.write(f"Expected state: {st.session_state.oauth_state}")
+        
         redirect_response = st.text_input("Enter the complete redirect URL:")
         if redirect_response:
             try:
-                # Extract code and state from redirect URL
-                code, returned_state = extract_auth_code_from_url(redirect_response)
+                # Parse the redirect URL
+                parsed = urlparse(redirect_response)
+                params = parse_qs(parsed.query)
+                
+                # Extract state and code
+                returned_state = params.get('state', [None])[0]
+                code = params.get('code', [None])[0]
+                
+                # For debugging
+                st.write(f"Returned state: {returned_state}")
                 
                 # Verify state matches
                 if returned_state != st.session_state.oauth_state:
                     st.error("State mismatch! Please try the authorization process again.")
-                    # Reset the OAuth flow
-                    st.session_state.oauth_flow_started = False
-                    st.session_state.auth_url = None
-                    st.session_state.oauth_state = None
-                    if 'flow' in st.session_state:
-                        del st.session_state.flow
+                    logger.error(f"State mismatch. Expected: {st.session_state.oauth_state}, Got: {returned_state}")
+                    reset_oauth_flow()
+                    st.experimental_rerun()
                     return None
                 
+                # Get the flow from session state
                 flow = st.session_state.flow
                 flow.fetch_token(authorization_response=redirect_response)
                 creds = flow.credentials
@@ -138,23 +142,20 @@ def get_gmail_service():
                 st.info("Copy this token information and add it to your Streamlit secrets as GMAIL_TOKEN")
                 st.success("Successfully generated Gmail token!")
                 
-                # Clear the OAuth flow state
-                st.session_state.oauth_flow_started = False
-                st.session_state.auth_url = None
-                st.session_state.oauth_state = None
-                if 'flow' in st.session_state:
-                    del st.session_state.flow
-                    
+                # Reset the OAuth flow
+                reset_oauth_flow()
                 return None
                 
             except Exception as e:
                 st.error(f"Error during authorization: {e}")
                 logger.error(f"Authorization error: {e}")
+                reset_oauth_flow()
                 return None
         return None
 
     except Exception as e:
         logger.error(f"Error in get_gmail_service: {e}")
+        reset_oauth_flow()
         raise Exception(f"Error initializing Gmail service: {e}")
 
 def send_email(service, to, subject, body):
