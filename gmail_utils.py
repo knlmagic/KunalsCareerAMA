@@ -14,6 +14,9 @@ import base64
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Allow OAuth over HTTP for localhost
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+
 # If modifying these scopes, delete the file token.pickle.
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 
