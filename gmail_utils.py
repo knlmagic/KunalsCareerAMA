@@ -20,84 +20,102 @@ os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 # If modifying these scopes, delete the file token.pickle.
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 
+def initialize_session_state():
+    """Initialize session state variables."""
+    if 'oauth_flow_started' not in st.session_state:
+        st.session_state.oauth_flow_started = False
+    if 'auth_url' not in st.session_state:
+        st.session_state.auth_url = None
+
 def get_gmail_service():
     """Get Gmail API service instance."""
     try:
+        initialize_session_state()
         creds = None
+        
         # Try to load credentials from Streamlit secrets first
         if "GMAIL_TOKEN" in st.secrets:
             try:
                 logger.info("Found token in Streamlit secrets")
                 token_info = json.loads(st.secrets["GMAIL_TOKEN"])
                 creds = Credentials.from_authorized_user_info(token_info, SCOPES)
+                if creds and creds.valid:
+                    service = build('gmail', 'v1', credentials=creds)
+                    logger.info("Successfully built Gmail service from secrets")
+                    return service
             except Exception as e:
                 logger.error(f"Error loading token from secrets: {e}")
         
-        # If no valid credentials available, let the user log in
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                logger.info("Refreshing expired credentials")
-                creds.refresh(Request())
-            else:
-                logger.info("Starting new OAuth2 flow")
-                # Parse the client config from secrets
-                client_config = json.loads(st.secrets["GOOGLE_CLIENT_CONFIG"])
+        # If we reach here, we need to start the OAuth flow
+        if not st.session_state.oauth_flow_started:
+            logger.info("Starting new OAuth2 flow")
+            st.session_state.oauth_flow_started = True
+            
+            # Parse the client config from secrets
+            client_config = json.loads(st.secrets["GOOGLE_CLIENT_CONFIG"])
+            
+            # Create the flow using the client config
+            flow = Flow.from_client_config(
+                client_config,
+                scopes=SCOPES,
+                redirect_uri="http://localhost"
+            )
+            
+            auth_url, _ = flow.authorization_url(
+                access_type='offline',
+                include_granted_scopes='true',
+                prompt='consent'
+            )
+            
+            st.session_state.auth_url = auth_url
+            st.session_state.flow = flow
+        
+        # Display OAuth instructions
+        st.markdown("""
+        ### Gmail Authorization Required
+        1. Click the link below to authorize the application
+        2. Select your Google account and grant permission
+        3. You will be redirected to localhost (which may show an error - this is expected)
+        4. Copy the entire URL from your browser's address bar after being redirected
+        5. Paste the complete URL in the text box below
+        """)
+        
+        st.markdown(f"[Click here to authorize the application]({st.session_state.auth_url})")
+        
+        redirect_response = st.text_input("Enter the complete redirect URL:")
+        if redirect_response:
+            try:
+                flow = st.session_state.flow
+                flow.fetch_token(authorization_response=redirect_response)
+                creds = flow.credentials
                 
-                # Create the flow using the client config
-                flow = Flow.from_client_config(
-                    client_config,
-                    scopes=SCOPES,
-                    redirect_uri="http://localhost"  # This should match what's in your Google Cloud Console
-                )
+                # Save credentials info for admin to update secrets
+                token_info = {
+                    'token': creds.token,
+                    'refresh_token': creds.refresh_token,
+                    'token_uri': creds.token_uri,
+                    'client_id': creds.client_id,
+                    'client_secret': creds.client_secret,
+                    'scopes': creds.scopes
+                }
                 
-                auth_url, _ = flow.authorization_url(
-                    access_type='offline',
-                    include_granted_scopes='true',
-                    prompt='consent'
-                )
+                st.code(json.dumps(token_info, indent=2), language='json')
+                st.info("Copy this token information and add it to your Streamlit secrets as GMAIL_TOKEN")
+                st.success("Successfully generated Gmail token!")
                 
-                st.markdown("""
-                ### Gmail Authorization Required
-                1. Click the link below to authorize the application
-                2. Select your Google account and grant permission
-                3. You will be redirected to localhost (which may show an error - this is expected)
-                4. Copy the entire URL from your browser's address bar after being redirected
-                5. Paste the complete URL in the text box below
-                """)
-                
-                st.markdown(f"[Click here to authorize the application]({auth_url})")
-                
-                redirect_response = st.text_input("Enter the complete redirect URL:")
-                if redirect_response:
-                    try:
-                        flow.fetch_token(authorization_response=redirect_response)
-                        creds = flow.credentials
-                        
-                        # Save credentials info for admin to update secrets
-                        token_info = {
-                            'token': creds.token,
-                            'refresh_token': creds.refresh_token,
-                            'token_uri': creds.token_uri,
-                            'client_id': creds.client_id,
-                            'client_secret': creds.client_secret,
-                            'scopes': creds.scopes
-                        }
-                        
-                        st.code(json.dumps(token_info, indent=2), language='json')
-                        st.info("Copy this token information and add it to your Streamlit secrets as GMAIL_TOKEN")
-                        st.success("Successfully generated Gmail token!")
-                        return None
-                        
-                    except Exception as e:
-                        st.error(f"Error during authorization: {e}")
-                        logger.error(f"Authorization error: {e}")
-                        return None
+                # Clear the OAuth flow state
+                st.session_state.oauth_flow_started = False
+                st.session_state.auth_url = None
+                if 'flow' in st.session_state:
+                    del st.session_state.flow
+                    
                 return None
-
-        # Build and return the Gmail service
-        service = build('gmail', 'v1', credentials=creds)
-        logger.info("Successfully built Gmail service")
-        return service
+                
+            except Exception as e:
+                st.error(f"Error during authorization: {e}")
+                logger.error(f"Authorization error: {e}")
+                return None
+        return None
 
     except Exception as e:
         logger.error(f"Error in get_gmail_service: {e}")
