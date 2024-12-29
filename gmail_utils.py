@@ -1,6 +1,8 @@
 import os
 import pickle
 import logging
+import json
+import streamlit as st
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -14,6 +16,19 @@ logger = logging.getLogger(__name__)
 
 # If modifying these scopes, delete the file token.pickle.
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
+
+def get_client_secrets():
+    """Get client secrets either from file or Streamlit secrets."""
+    if 'GOOGLE_CLIENT_CONFIG' in st.secrets:
+        logger.info("Using client secrets from Streamlit secrets")
+        return json.loads(st.secrets['GOOGLE_CLIENT_CONFIG'])
+    else:
+        logger.info("Using client secrets from local file")
+        secrets_file = 'client_secret_893578123856-brrk9u10t25u2dmd2j9jooqqmj47e941.apps.googleusercontent.com.json'
+        if not os.path.exists(secrets_file):
+            raise Exception("Client secrets file not found and GOOGLE_CLIENT_CONFIG not in Streamlit secrets")
+        with open(secrets_file) as f:
+            return json.load(f)
 
 def get_gmail_service():
     """Get Gmail API service instance."""
@@ -34,10 +49,10 @@ def get_gmail_service():
                 creds.refresh(Request())
             else:
                 logger.info("Starting new OAuth2 flow")
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    'client_secret_893578123856-brrk9u10t25u2dmd2j9jooqqmj47e941.apps.googleusercontent.com.json', 
-                    SCOPES,
-                    redirect_uri='urn:ietf:wg:oauth:2.0:oob'  # Use manual copy-paste flow
+                client_secrets = get_client_secrets()
+                flow = InstalledAppFlow.from_client_secrets_dict(
+                    client_secrets,
+                    SCOPES
                 )
                 creds = flow.run_local_server(port=0)
                 logger.info("OAuth2 flow completed successfully")
