@@ -192,7 +192,7 @@ if 'chat_history' not in st.session_state:
 
 # Create a form for user input
 with st.form(key='question_form'):
-    user_input = st.text_input("Ask me anything about my career journey:", key='user_input')
+    user_input = st.text_input("Ask me anything about my career journey:", key='user_input', value="" if submit_button else st.session_state.get('user_input', ''))
     submit_button = st.form_submit_button("Ask")
 
 if submit_button and user_input:
