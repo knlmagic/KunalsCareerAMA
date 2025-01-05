@@ -18,7 +18,7 @@ client = OpenAI(api_key=st.secrets['OPENAI_API_KEY'])
 try:
     gmail_service = get_gmail_service()
 except Exception as e:
-    st.error(f"Error initializing Gmail service: {str(e)}")
+    st.error(f"Error initializing Gmail service: {e}")
     gmail_service = None
 
 def read_pdf_file(file_path, file_type):
@@ -89,13 +89,13 @@ if resume_content is None or about_me_content is None:
     st.stop()
 
 # Title
-st.title("Ask Kunal - AI Solutions AMA")
+st.title("Ask Me Anything - Kunal's AMA Agent")
 
 # Intro
 st.write("""
-Welcome! This is Kunal's interactive GenAI agent to help you learn about Kunal's background, expertise, and vision for AI at VSP Vision's Global Innovation Center. 
+Welcome! This is Kunal's interactive AI Agent designed to help you learn about my background, expertise, and vision for Generative AI's impact on the world, especially in Enterprise Business. 
 
-         Type a question below to get started.
+Type a question below to get started.
 """)
 
 # Predefined Questions and Answers
@@ -109,32 +109,49 @@ qa_pairs = {
 
 def get_gpt4_response(question):
     try:
-        system_prompt = f"""You are Kunal, a GenAI expert currently helping enterprises define and drive their enterprise AI strategies, and would like to lead AI initiatives at VSP Vision's Global Innovation Center. 
-        You are kind, compassionate, and empathetic. You are also a great listener and a great communicator. You enjoy helping people and making a difference.
-        You believe in the power of AI to transform businesses and improve lives. Starting with learning about VSP Vision's Global Innovation Center and its mission to transform vision care, you are eager to learn more about the company and its culture.
-        Your responses should be based STRICTLY on the following information and nothing else:
+        system_prompt = f"""You are Kunal, a GenAI expert helping enterprises define and drive AI strategies, and you are eager to lead AI initiatives at VSP Vision's Global Innovation Center. 
+You are approachable, insightful, and forward-thinking, with a talent for simplifying complex AI concepts to help others succeed. 
+You are driven by a passion for leveraging AI to transform businesses and improve lives.  
 
-        Bold market point of view:
-Generative AI is flipping the script on software development: we're moving from rigid GUIs to adaptive, Generative and Conversational UIs that focus on delivering real business value, powered by 'thinking' software vs legacy programmatic logic.
-The old Agile/SAFe playbooks can't keep pace with LLM-enabled apps that learn and pivot in real time. 
-We have to rethink everything— application technology stack, operating models, development cycles, and how we measure success—as conversation replaces clicks. 
-But the biggest obstacle right now is closing the knowledge gap. Many teams aren't sure how to build and deploy LLM-based applications, and while IT folks might "get it" at a conceptual level, the business side often lags. 
-There's confusion on where to start, how to measure success, and how to transform old operating models into AI-native frameworks.
+Your mission in this AMA is to:  
+1. Share insights grounded in your experience and expertise.  
+2. Offer practical strategies for building AI-native frameworks and applications.  
+3. Highlight the transformative potential of AI, particularly in vision care and enterprise operations.  
+4. Inspire curiosity and deeper exploration of AI possibilities.  
 
-        Resume Information:
-        {resume_content}
+Your responses should be based STRICTLY on the following documents and nothing else:  
+---  
+**Key Perspectives on AI and Enterprise Transformation:**  
+Generative AI is redefining software development, shifting from rigid GUIs to adaptive, conversational UIs focused on real business value.  
+Legacy methods like Agile/SAFe struggle to keep pace with LLM-enabled applications that learn and adapt in real time.  
+Organizations must rethink tech stacks, operating models, development cycles, and metrics to transition into AI-native frameworks.  
+The biggest barrier? Bridging the knowledge gap—especially between technical teams and business leaders unsure where to start or how to measure success.  
 
-        Additional Background Information:
-        {about_me_content}
+---  
+**Resume Information:**  
+{resume_content}  
 
-        Important rules:
-        1. ONLY provide information that is explicitly mentioned in the documents above
-        2. If asked about something not covered in the documents, say "I don't have that information in my background documents"
-        3. Keep responses concise and professional
-        4. Do not make assumptions or add information not present in the documents
-        5. If asked about future vision or opinions, base them on the experience and expertise shown in the documents
-        """
-        
+**Background Information:**  
+{about_me_content}  
+
+---  
+**Rules and Boundaries:**  
+1. Only provide information explicitly mentioned in the documents above.  
+2. If asked about topics outside the documents, respond: \"I don't have that information in my background documents.\"  
+3. Keep responses concise, professional, and engaging.  
+4. Avoid assumptions or adding details not present in the documents.  
+5. For opinions or future vision questions, tie them to the expertise shown in the documents.  
+
+**Proactive Engagement Guidelines:**  
+- Ask clarifying questions if a query seems vague or could benefit from deeper exploration.  
+- Provide examples or frameworks to illustrate AI strategies when relevant.  
+- Invite follow-up questions to encourage deeper discussions.  
+
+**Example Prompt Responses:**  
+- \"That's a great question! Based on my background, one approach is...\"  
+- \"While I can't speak to specifics outside the provided documents, a general principle in AI adoption is...\"  
+- \"How do you see AI enhancing workflows in your organization? I'd be happy to explore that further.\"  
+"""
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
@@ -173,27 +190,43 @@ def find_best_match(user_question, questions):
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
 
-# Chatbot Input and Response
-with st.form(key='my_form', clear_on_submit=True):
-    user_question = st.text_input("Ask a question:")
+# Create a form for user input
+with st.form(key='question_form'):
+    user_input = st.text_input("Ask me anything about my career journey:", key='user_input')
     submit_button = st.form_submit_button("Ask")
 
-if submit_button and user_question:
-    # Get response using GPT-3.5-turbo
-    response = get_gpt4_response(user_question)
-    
-    # Save chat history to files
-    save_chat_history(user_question, response)
-    append_to_master_log(user_question, response)
-    
-    # Add to session state chat history
-    st.session_state.chat_history.append({"question": user_question, "answer": response})
-    
-    # Send email summary
-    send_chat_summary(user_question, response)
-    
-    # Display response
-    st.write("Response:", response)
+if submit_button and user_input:
+    try:
+        # Get AI response
+        response = get_gpt4_response(user_input)
+        
+        # Display the response
+        st.write("Response:", response)
+        
+        # Add to chat history
+        if 'chat_history' not in st.session_state:
+            st.session_state.chat_history = []
+        st.session_state.chat_history.append({"question": user_input, "answer": response})
+        
+        # Try to send email if Gmail service is available
+        if gmail_service:
+            try:
+                # Format chat history
+                email_body = "Recent Chat:\n\n"
+                email_body += f"Q: {user_input}\nA: {response}\n"
+                
+                # Send email
+                send_email(
+                    gmail_service,
+                    st.secrets["RECIPIENT_EMAIL"],
+                    "New Chat Interaction",
+                    email_body
+                )
+            except Exception as e:
+                st.error(f"Failed to send email notification: {e}")
+        
+    except Exception as e:
+        st.error(f"Error: {e}")
 
 # Display current session chat history (visible to everyone)
 if st.session_state.chat_history:
