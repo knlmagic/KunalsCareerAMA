@@ -22,6 +22,9 @@ except Exception as e:
     gmail_service = None
 
 def read_pdf_file(file_path, file_type):
+    if not os.path.exists(file_path):
+        st.error(f"{file_type} file not found at {file_path}")
+        return None
     try:
         with open(file_path, 'rb') as file:
             pdf_reader = PyPDF2.PdfReader(file)
@@ -85,7 +88,7 @@ resume_content = read_pdf_file("resume.pdf", "resume")
 about_me_content = read_pdf_file("About Me.pdf", "About Me document")
 
 if resume_content is None or about_me_content is None:
-    st.error("Required PDF files not found. Please ensure both resume.pdf and About Me.pdf are in the same directory.")
+    st.error("Required PDF files not found or couldn't be read. Please ensure both resume.pdf and About Me.pdf are in the same directory.")
     st.stop()
 
 # Title
@@ -186,47 +189,60 @@ def find_best_match(user_question, questions):
                 return original_q
     return None
 
-# Initialize chat history
+# Initialize session state variables
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
+if 'last_question' not in st.session_state:
+    st.session_state.last_question = None
 
 # Create a form for user input
 with st.form(key='question_form'):
-    user_input = st.text_input("Ask me anything about my career journey:", key='user_input', value="" if submit_button else st.session_state.get('user_input', ''))
     submit_button = st.form_submit_button("Ask")
+    user_input = st.text_input(
+        "Ask me anything about my career journey:",
+        key='user_input',
+        value=st.session_state.get('user_input', '')
+    ).strip()
 
-if submit_button and user_input:
-    try:
-        # Get AI response
-        response = get_gpt4_response(user_input)
-        
-        # Display the response
-        st.write("Response:", response)
-        
-        # Add to chat history
-        if 'chat_history' not in st.session_state:
-            st.session_state.chat_history = []
-        st.session_state.chat_history.append({"question": user_input, "answer": response})
-        
-        # Try to send email if Gmail service is available
-        if gmail_service:
-            try:
-                # Format chat history
-                email_body = "Recent Chat:\n\n"
-                email_body += f"Q: {user_input}\nA: {response}\n"
+if submit_button:
+    if not user_input:
+        st.warning("Please enter a question before submitting.")
+    else:
+        try:
+            # Save the question to prevent duplicates
+            if user_input == st.session_state.last_question:
+                st.warning("You just asked this question. Try asking something else!")
+            else:
+                st.session_state.last_question = user_input
                 
-                # Send email
-                send_email(
-                    gmail_service,
-                    st.secrets["RECIPIENT_EMAIL"],
-                    "New Chat Interaction",
-                    email_body
-                )
-            except Exception as e:
-                st.error(f"Failed to send email notification: {e}")
-        
-    except Exception as e:
-        st.error(f"Error: {e}")
+                # Get AI response
+                response = get_gpt4_response(user_input)
+                
+                # Display the response
+                st.write("Response:", response)
+                
+                # Save chat history first
+                st.session_state.chat_history.append({"question": user_input, "answer": response})
+                save_chat_history(user_input, response)
+                append_to_master_log(user_input, response)
+                
+                # Then try to send email if Gmail service is available
+                if gmail_service:
+                    try:
+                        email_body = "Recent Chat:\n\n"
+                        email_body += f"Q: {user_input}\nA: {response}\n"
+                        send_email(
+                            gmail_service,
+                            st.secrets["RECIPIENT_EMAIL"],
+                            "New Chat Interaction",
+                            email_body
+                        )
+                    except Exception as e:
+                        st.error(f"Failed to send email notification: {e}")
+                        # Email failure doesn't affect the chat functionality
+                
+        except Exception as e:
+            st.error(f"Error processing your question: {str(e)}")
 
 # Display current session chat history (visible to everyone)
 if st.session_state.chat_history:
