@@ -197,12 +197,12 @@ if 'last_question' not in st.session_state:
 
 # Create a form for user input
 with st.form(key='question_form'):
-    submit_button = st.form_submit_button("Ask")
     user_input = st.text_input(
         "Ask me anything about my career journey:",
         key='user_input',
         value=st.session_state.get('user_input', '')
     ).strip()
+    submit_button = st.form_submit_button("Ask")
 
 if submit_button:
     if not user_input:
