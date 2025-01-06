@@ -11,7 +11,7 @@ import base64
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# If modifying these scopes, delete the file token.pickle.
+# If modifying these scopes, delete any existing token
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 
 def get_gmail_service():
@@ -23,18 +23,25 @@ def get_gmail_service():
                 logger.info("Found token in Streamlit secrets")
                 token_info = json.loads(st.secrets["GMAIL_TOKEN"])
                 creds = Credentials.from_authorized_user_info(token_info, SCOPES)
-                
-                # Build and return the Gmail service
-                service = build('gmail', 'v1', credentials=creds)
-                logger.info("Successfully built Gmail service")
-                return service
-                
             except Exception as e:
                 logger.error(f"Error loading token from secrets: {e}")
                 raise Exception(f"Error initializing Gmail service: {e}")
         else:
-            logger.error("No Gmail token found in secrets")
-            raise Exception("Gmail token not configured. Please contact the administrator.")
+            # Try to load from local token file
+            token_file = 'new_gmail_token.json'
+            if os.path.exists(token_file):
+                logger.info("Found local token file")
+                with open(token_file, 'r') as f:
+                    token_info = json.load(f)
+                creds = Credentials.from_authorized_user_info(token_info, SCOPES)
+            else:
+                logger.error("No Gmail token found in secrets or locally")
+                raise Exception("Gmail token not configured. Please run get_gmail_token.py to generate a token.")
+
+        # Build and return the Gmail service
+        service = build('gmail', 'v1', credentials=creds)
+        logger.info("Successfully built Gmail service")
+        return service
 
     except Exception as e:
         logger.error(f"Error in get_gmail_service: {e}")

@@ -145,7 +145,7 @@ Key is, get started.
 3. Keep responses professional and engaging.  
 4. Avoid assumptions or adding details not present in the documents.  
 5. For opinions or future vision questions, tie them to the expertise shown in the documents.
-6. Where appropriate, please start each response with a validation back to the user's question, for e.g. \"You asked about...\" or \"Great question!...\"
+6. Where appropriate, please start each response with a validation back to the user's question, for e.g. \"You asked about...\" or \"Great question!...\", but don't literally use just these phrases, be creative.
 
 **Proactive Engagement Guidelines:**  
 - At then end of each response, if you see fit please do ask clarifying questions, for e.g. if a query seems vague or could benefit from deeper exploration.  
@@ -163,8 +163,8 @@ Key is, get started.
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": question}
             ],
-            max_tokens=500,
-            temperature=0.7
+            max_tokens=1000,
+            temperature=0.6
         )
         return response.choices[0].message.content
     except Exception as e:
