@@ -194,13 +194,19 @@ if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
 if 'last_question' not in st.session_state:
     st.session_state.last_question = None
+if 'user_input' not in st.session_state:
+    st.session_state.user_input = ""
+
+def clear_input():
+    st.session_state.user_input = ""
 
 # Create a form for user input
 with st.form(key='question_form'):
     user_input = st.text_input(
         "Ask me anything about my career journey:",
         key='user_input',
-        value=st.session_state.get('user_input', '')
+        value=st.session_state.user_input,
+        on_change=clear_input
     ).strip()
     submit_button = st.form_submit_button("Ask")
 
@@ -225,6 +231,9 @@ if submit_button:
                 st.session_state.chat_history.append({"question": user_input, "answer": response})
                 save_chat_history(user_input, response)
                 append_to_master_log(user_input, response)
+                
+                # Clear the input field
+                st.session_state.user_input = ""
                 
                 # Then try to send email if Gmail service is available
                 if gmail_service:
