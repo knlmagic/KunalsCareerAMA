@@ -202,7 +202,7 @@ with st.form(key='question_form'):
     user_input = st.text_input(
         "Ask me anything about my career journey:",
         key='user_input',
-        value="" if st.session_state.form_submitted else None
+        value="" if st.session_state.form_submitted else ""
     ).strip()
     submit_button = st.form_submit_button("Ask")
     if submit_button:
