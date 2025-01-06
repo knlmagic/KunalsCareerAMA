@@ -194,23 +194,30 @@ if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
 if 'last_question' not in st.session_state:
     st.session_state.last_question = None
+if 'form_submitted' not in st.session_state:
+    st.session_state.form_submitted = False
 
 # Create a form for user input
 with st.form(key='question_form'):
     user_input = st.text_input(
         "Ask me anything about my career journey:",
-        key='user_input'
+        key='user_input',
+        value="" if st.session_state.form_submitted else None
     ).strip()
     submit_button = st.form_submit_button("Ask")
+    if submit_button:
+        st.session_state.form_submitted = True
 
 if submit_button:
     if not user_input:
         st.warning("Please enter a question before submitting.")
+        st.session_state.form_submitted = False
     else:
         try:
             # Save the question to prevent duplicates
             if user_input == st.session_state.last_question:
                 st.warning("You just asked this question. Try asking something else!")
+                st.session_state.form_submitted = False
             else:
                 st.session_state.last_question = user_input
                 
@@ -237,14 +244,12 @@ if submit_button:
                             email_body
                         )
                     except Exception as e:
-                        st.error(f"Failed to send email notification: {e}")
+                        print(f"Email notification failed: {str(e)}")
                         # Email failure doesn't affect the chat functionality
-                
-                # Clear the form by forcing a rerun
-                st.rerun()
                 
         except Exception as e:
             st.error(f"Error processing your question: {str(e)}")
+            st.session_state.form_submitted = False
 
 # Display current session chat history (visible to everyone)
 if st.session_state.chat_history:
