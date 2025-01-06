@@ -197,10 +197,7 @@ if 'last_question' not in st.session_state:
 
 # Create a form for user input
 with st.form(key='question_form'):
-    user_input = st.text_input(
-        "Ask me anything about my career journey:",
-        key='user_input'
-    ).strip()
+    user_input = st.text_input("Ask me anything about my career journey:").strip()
     submit_button = st.form_submit_button("Ask")
 
 if submit_button:
@@ -238,9 +235,6 @@ if submit_button:
                         )
                     except Exception as e:
                         print(f"Email notification failed: {str(e)}")
-                
-                # Clear the input by resetting the session state
-                st.session_state.user_input = ""
                 
         except Exception as e:
             st.error(f"Error processing your question: {str(e)}")
